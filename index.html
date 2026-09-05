@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="robots" content="noindex,nofollow">
+  <title>ぶんすう ピザたんけん</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: manipulation;
+    }
+    body {
+      font-family: 'Hiragino Kaku Gothic ProN', 'メイリオ', sans-serif;
+      background-color: #fff9e6;
+      color: #333;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin: 0;
+      padding: 15px;
+    }
+    h1 {
+      font-size: clamp(20px, 4.5vw, 26px);
+      color: #d35400;
+      margin: 5px 0 15px 0;
+    }
+
+    /* 設定エリア */
+    .setting-panel {
+      background: #fff;
+      padding: 12px 20px;
+      border-radius: 15px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+      display: flex;
+      gap: 15px;
+      align-items: center;
+      margin-bottom: 15px;
+      font-weight: bold;
+    }
+    select {
+      font-size: 18px;
+      padding: 5px 10px;
+      border-radius: 8px;
+      border: 2px solid #e67e22;
+      background: #fff;
+    }
+
+    /* ピザ表示エリア */
+    .stage {
+      width: 100%;
+      max-width: 400px;
+      height: 300px;
+      background: #fff;
+      border-radius: 20px;
+      padding: 20px;
+      box-shadow: 0 6px 15px rgba(0,0,0,0.1);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      position: relative;
+    }
+
+    svg {
+      width: 240px;
+      height: 240px;
+      transform: rotate(-90deg); /* 12時の位置からスタート */
+    }
+
+    .slice {
+      fill: #ffbe76;
+      stroke: #ffffff;
+      stroke-width: 3;
+      transition: all 0.3s ease;
+      cursor: pointer;
+    }
+    .slice.active {
+      fill: #ff5252;
+    }
+    .slice-border {
+      fill: none;
+      stroke: #d35400;
+      stroke-width: 8;
+    }
+
+    /* 分数表示エリア */
+    .fraction-box {
+      margin-top: 15px;
+      background: #fff;
+      border: 3px solid #e67e22;
+      padding: 10px 30px;
+      border-radius: 15px;
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+    .fraction {
+      display: inline-flex;
+      flex-direction: column;
+      vertical-align: middle;
+      text-align: center;
+      font-size: 24px;
+      font-weight: bold;
+      color: #d35400;
+    }
+    .numerator {
+      border-bottom: 3px solid #d35400;
+      padding: 0 6px;
+    }
+    .denominator {
+      padding: 0 6px;
+    }
+    .fraction-text {
+      font-size: 20px;
+      font-weight: bold;
+      color: #2c3e50;
+    }
+
+    /* 操作ボタン */
+    .controls {
+      display: flex;
+      gap: 10px;
+      margin-top: 15px;
+      width: 100%;
+      max-width: 400px;
+    }
+    .btn {
+      flex: 1;
+      padding: 12px;
+      font-size: 16px;
+      font-weight: bold;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      color: white;
+      box-shadow: 0 4px 0 rgba(0,0,0,0.1);
+    }
+    .btn-add { background-color: #2ecc71; }
+    .btn-sub { background-color: #e74c3c; }
+    .btn:active { transform: translateY(2px); box-shadow: none; }
+  </style>
+</head>
+<body>
+
+  <h1>ぶんすう ピザたんけん</h1>
+
+  <div class="setting-panel">
+    <span>ピザをいくつに分ける？：
+      <select id="denom-select" onchange="initPizza()">
+        <option value="2">2等分</option>
+        <option value="3">3等分</option>
+        <option value="4" selected>4等分</option>
+        <option value="6">6等分</option>
+        <option value="8">8等分</option>
+      </select>
+    </span>
+  </div>
+
+  <div class="stage">
+    <svg id="pizza-svg" viewBox="0 0 200 200"></svg>
+  </div>
+
+  <div class="fraction-box">
+    <div class="fraction">
+      <span id="numerator-val" class="numerator">1</span>
+      <span id="denominator-val" class="denominator">4</span>
+    </div>
+    <span id="desc-text" class="fraction-text">まいぶん</span>
+  </div>
+
+  <div class="controls">
+    <button class="btn btn-sub" onclick="changePiece(-1)">1カット へらす</button>
+    <button class="btn btn-add" onclick="changePiece(1)">1カット ふやす</button>
+  </div>
+
+  <script>
+    let denominator = 4;
+    let numerator = 1;
+
+    function initPizza() {
+      denominator = parseInt(document.getElementById('denom-select').value);
+      numerator = 1; // 初期値1ピース
+      renderPizza();
+    }
+
+    function changePiece(delta) {
+      numerator += delta;
+      if (numerator < 0) numerator = 0;
+      if (numerator > denominator) numerator = denominator;
+      renderPizza();
+    }
+
+    function renderPizza() {
+      const svg = document.getElementById('pizza-svg');
+      svg.innerHTML = '';
+
+      const cx = 100, cy = 100, r = 80;
+
+      // 下地のピザ（皿）
+      const bgCircle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+      bgCircle.setAttribute("cx", cx);
+      bgCircle.setAttribute("cy", cy);
+      bgCircle.setAttribute("r", r);
+      bgCircle.setAttribute("fill", "#f5cd79");
+      bgCircle.setAttribute("stroke", "#e67e22");
+      bgCircle.setAttribute("stroke-width", "6");
+      svg.appendChild(bgCircle);
+
+      // カットされたピースを描画
+      for (let i = 0; i < denominator; i++) {
+        const startAngle = (i * 360) / denominator;
+        const endAngle = ((i + 1) * 360) / denominator;
+
+        const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+        const d = createSectorPath(cx, cy, r, startAngle, endAngle);
+        path.setAttribute("d", d);
+        
+        // 選択されているピース（分子の数だけ赤く塗る）
+        if (i < numerator) {
+          path.setAttribute("class", "slice active");
+        } else {
+          path.setAttribute("class", "slice");
+        }
+
+        // タッチでも切り替え可能に
+        path.addEventListener('click', () => {
+          numerator = i + 1;
+          renderPizza();
+        });
+
+        svg.appendChild(path);
+      }
+
+      // UI表示の更新
+      document.getElementById('numerator-val').textContent = numerator;
+      document.getElementById('denominator-val').textContent = denominator;
+    }
+
+    // 扇形（ピザの1ピース）を描くSVGパスの作成
+    function createSectorPath(cx, cy, r, startAngle, endAngle) {
+      const startRad = (startAngle * Math.PI) / 180;
+      const endRad = (endAngle * Math.PI) / 180;
+
+      const x1 = cx + r * Math.cos(startRad);
+      const y1 = cy + r * Math.sin(startRad);
+      const x2 = cx + r * Math.cos(endRad);
+      const y2 = cy + r * Math.sin(endRad);
+
+      const largeArc = (endAngle - startAngle) > 180 ? 1 : 0;
+
+      return `M ${cx} ${cy} L ${x1} ${y1} A ${r} ${r} 0 ${largeArc} 1 ${x2} ${y2} Z`;
+    }
+
+    window.onload = initPizza;
+  </script>
+</body>
+</html>
